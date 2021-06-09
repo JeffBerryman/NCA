@@ -1,0 +1,204 @@
+
+module nca-extensions {
+
+	/* In this file, single quotes replace double quotes in comment texts */
+
+	namespace "urn:amwa:nca:yang-extensions";
+	prefix "nc";
+
+	organization
+	"AMWA NMOS";
+
+	contact
+	"Editor:  Jeff Berryman <ja.berryman@us.bosch.com>";
+
+	description
+	"YANG extensions for NMOS NCA definitions";
+
+	revision 2021-06-05{
+	description "Initial revision.";
+	}
+	
+	feature nca-extensions {
+	description "Indicates that the server supports NCA extensions.";
+	}
+	
+	// NCA IDENTIFIERS
+
+	extension element-id {
+		description 
+		"	
+			Generates a leaf node that contains an element-ID value, i.e. the value of 
+			the ID of a property, action, or notification. 
+		"
+		argument theID;				// Element ID in string format, e.g. "3m5", "2p1", "4e1", ...
+	}
+	
+	extension class-id {
+		description 
+		"	
+			Generates a leaf node that contains an NCA classID.
+			The argument is a classID string with the following syntax:
+		
+			{v, i1.i2.i3...}
+				where 
+					v is the class version number
+					i1, i2, ... are class index codes
+					where
+						a class index code is either
+							(a)	the integer ordinal of a class in its tree level, or
+							(b)	a YANG metaconstant (see nca:def, below) that gives
+									the value of the owning authority's IEEE OUI or CID.
+									
+					Form (a) is for standard classes, form (b) for proprietary classes.
+					
+			EXAMPLE:
+			
+				ClassID string of ncaGain version 3:
+					'3,1.2.1.2'
+					
+				ClassID of a proprietary child of ncaGain, version 1:
+					'1,1.2.1.2.owner.1'
+					
+					where 'owner' has previously been defined as an IEEE organization ID:
+						nc:def owner {nc:value "FA2EE9"}
+		"				
+								
+		argument theID;				// Class ID in string format
+	}	
+	
+	// VALUE-RELATED STATEMENTS
+
+	extension instance-data {
+		description 
+		"	
+			Generates a node of a complex type instance list.
+			May be repeated to generate multiple elements.
+			Substatements are leaf, leaf-list, ct:instance-list.
+			Names of elements mentioned must agree with the original complex-type declaration.
+			Only elements that require initialized values need be mentioned.
+			The statement takes no argument; the substatements do all the work.
+			
+			EXAMPLE: 
+				<<assume there is a complex type 'countryDescriptor' with leaves 'name' and 'continent'>>
+				<<remember that single quotes are actually double quotes>>
+				
+				ct:instance-list countries {
+					ct:instance-type countryDescriptor;
+					ct:instance-data {
+						leaf name 			{ncx:value 'Albania';}
+						leaf continent	{ncx:value 'Europe';}
+					}
+					ct:instance-data {
+						leaf name			{ncx:value 'Morocco';}
+						leaf continent	{ncx:value 'Africa';}
+					}
+					etcetera
+				}
+		"
+	}
+	
+	extension value {
+		description
+		"	
+			Defines a scalar value.
+			
+			Used as a substatement of ct:instance-list-item 
+			to initialize an element to a given value.
+			
+			Used in nca:def (see below) to define the value of a metaconstant.
+			
+			In contexts where the 'default' statement is allowed,
+			this statement may be used instead with identical effect,
+			but improved readability.
+		"
+		argument theValue;				// Data value.
+	}
+
+	extension def {
+		description
+		"	
+			Defines a YANG metaconstant, i.e. a constant used in the schema
+			that does not create a data node.
+			Metaconstants are typically used for guiding code generation processes.
+			
+			Uses an nca:value substatement to define the value.
+			
+			EXAMPLE:  nca:def pi {nca:value 3.1416;}
+		"
+		argument theConstant;
+	}
+
+	extension port {
+	
+	// NCA-SPECIFIC CONSTRUCTS
+	
+	extension port {
+		description
+		"
+			Defines an NCA port leaf in an objects ports list.
+			Argument is a port string.
+			
+			Syntax of port string:
+				i,direction,name[,clockPath] 	where
+					i 				is the ordinal of the port in the ports list
+					direction 	is 'in' or 'out'
+					name			is the string name of the port (may be null)
+					clockpath	(optional) is the pathname of the media clock attached to this port
+			
+			EXAMPLE:
+				// Assumes a media clock object named 'Clock1' in the root block.
+				ct:instance StereoGain {					// a two-channel gain control
+					ct:instance-type ncaGain;
+					ct:instance-list ports {
+						ct:instance-type ncaPort;
+						
+						ncx:port 	'1,in,LeftIn,/Clock1'
+						ncx:port	'2,in,RightIn,/Clock1'
+						ncx:port	'3,out,LeftOut,/Clock1'
+						ncx:port	'4,out,RightOut,/Clock1'
+						
+					}
+					...
+				}
+		"
+	}
+	
+	extension signal-path {
+		description
+		"
+			Defines a signal-path leaf in a block's signal-path list.
+			Argument is a signal-path string.  
+			
+			Syntax of signal-path string:
+				A(i),B(j) where
+					A is the source object name
+					i is the source port index in object A
+					B is the sink object name 
+					j is the sink port index in object B
+					
+				To indicate a port of the containing block, use an asterisk for the name.
+				
+					
+			EXAMPLE: 
+				// 	This example shows a simple signal flow from block input port 1 
+				//		through an object named 'EQ' and an object named 'Gain'
+				//		to block output port 5.
+				//		Remember that single quotes are actually double quotes.
+				
+				ct:complex type myBlock {
+					ct:extends ncaBlock;
+					ct:instance-list signalFlow {
+						ct:instance-type  ncaSignalPath;
+						
+						ncx:signal-path '*(1),EQ(1)'
+						ncx:signal-path 'EQ(2), Gain(1)'
+						ncx:signal-path 'Gain(2),*(5)'
+						
+					}
+					<<rest of block definition>>
+				}
+		"	
+		argument thePath;
+	}
+}

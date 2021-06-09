@@ -1,0 +1,54 @@
+module EqA {
+	description
+		"
+		NCA schema "EqA" for simple 3-band PEQ.
+		Contents of schema:
+		
+			Name						Class							Comment
+			-----------------------------------------------------------
+			Objects in signal path (in order):
+			
+			Bypass					ncaSwitch
+			PEQ1						ncaFilterParametric
+			PEQ2						ncaFilterParametric
+			PEQ2						ncaFilterParametric
+			
+			(instance-name)		ncaBlock
+			-----------------------------------------------------------		
+	"
+	//	NCC standard schema header
+	yang-version	1.1;
+	include			ncc 	{prefix nca;}
+	import 			ietf-complex-types {prefix ct;}
+	import 			nca-extensions {prefix nc;}
+	// ----------------------------------------
+	
+		// Block 
+	
+	ct:complex-type 			EqA {
+		ct:extends ncaBlock
+		ct:instance members {
+			ct:instance-list ncaBlockMember
+	
+		// Bypass switch
+		
+		ct:instance bypass { 
+			ct:instance-type		ncaSwitch {
+				leaf						position			{default 0;}
+				leaf-list				positionNames {
+					default "in";
+					default "thru";
+				}
+				leaf-list				positionEnable {
+					default true;
+					default true;
+				}
+			}
+		
+		// Filters
+		
+		ct:instance  band1 { ct:instance-type ncaFilterParametric; }
+		ct:instance  band2 { ct:instance-type ncaFilterParametric; }
+		ct:instance  band3 { ct:instance-type ncaFilterParametric; }
+	}	
+}

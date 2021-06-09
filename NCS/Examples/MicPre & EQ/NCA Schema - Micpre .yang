@@ -1,0 +1,165 @@
+module MicpreB {
+	descripion
+	"
+		NCA schema "MicPreB" for simple microphone preamp.
+		This version defines block signal flow. 
+		'MicpreA' is the same, but without the signal flow definition.
+		
+		Contents of schema:
+		
+			Name						Class							Comment
+			-----------------------------------------------------------
+			Objects in signal path (in order):
+			
+			Pad						ncaSwitch
+			PreampGain				ncaGain
+			Eq1						schema "EqA"					Nested block
+			Eq2						schema "EqA"					Nested block
+			Gain						ncaGain
+			Mute						ncaMute
+			
+			Objects not in signal path:
+			
+			PhantomPower			ncaSwitch
+			Level					ncaAudioLevelSensor
+			
+			Container object:
+			
+			(instance-name)		ncaBlock
+			-----------------------------------------------------------		
+	"
+	
+	//	NCA standard schema header --------------
+	
+	yang-version	1.1;
+	import 			nca-yang-extensions 	{prefix ncx;}
+	include			nca-control-classes 	{prefix ncc;}		// This prefix is not normally used in schemas.
+	import 			ietf-complex-types 	{prefix ct;}
+	ncx:def			owner  						{ncx:value "FA2EE9"}
+	
+	// -----------------------------------------
+	
+	// Nested schemas
+	import			EqA	{prefix "eq"}		// 3-band PEQ #1
+	
+	// -----------------------------------------
+	
+	// Local groupings - reusable blocks of node definitions
+	
+	// Standard pair of input & output ports for worker objects in the signal path
+	
+	// This grouping defines the 'ports' property of a worker in this simple block.
+	grouping port-pair {
+		ct:instance-list ports {							
+			ct:instance-type ncaPort;  
+			port 1,"in,Input,/Clock1"
+			port 2,"out,Output,/Clock1"
+		}
+	}
+
+	// =========================================================================
+	
+	// Block definition starts here
+	
+	ct:complex-type MicPreA {
+		ct:extends ncaBlock
+		ct:instance-list ports {						// This block's ports					
+			ct:instance-type ncaPort;  
+			port "1,in,Input,/Clock1"
+			port "2,out,Output,/Clock1"
+			port "3,out,PreFaderOutput,/Clock1"
+		}
+		
+		// Members.  This list is populated at block construction time.
+		ct:instance-list members {
+			ct:instance-type ncaOID;
+				
+		// Signal flow 
+		ct:instance-list signalFlow {
+			ct:instance-type ncaSignalPath 
+			ncx:signal-path		"*(1),Pad(1)"
+			ncx:signal-path		"Pad(2),PreampGain(1)"
+			ncx:signal-path		"PreampGain(2),Eq1(1)"
+			ncx:signal-path		"Eq1(2),Eq2((1)"
+			ncx:signal-path		"Eq2(2),Gain(1)"
+			ncx:signal-path		"Gain(2),Mute(1)"
+			ncx:signal-path		"Mute(2),*(2)"
+			ncx:signal-path		"PreampGain(2),InputLevel(1)"	// Input level meter tap
+			ncx:signal-path		"Eq2(2),OutputLevel(1)"				// Output level meter tap
+			ncx:signal-path		"PreampGain(2),*(3)"					// Pre-EQ, Pre-Fade output tap
+		}
+	
+		// Pad switch: 0dB, -20dB
+		ct:instance Pad {
+			ct:instance-type ncaSwitch;
+			uses port-pair;					// This object's ports
+			leaf position {ncx:value 	 0;}
+			leaf-list positionNames {
+				ncx:value "0dB";
+				ncx:value "-20dB";
+			}
+			leaf-list positionEnable {
+				ncx:value true;
+				ncx:value true;
+			}
+		}
+	
+		// Preamp gain	
+		ct:instance PreampGain {	
+			ct:instance-type ncaGain;
+			uses port-pair;					// This object's ports
+			leaf	setting	{ncx:value 	0;}
+		}
+			
+		// Equalizer sections - two 'EqA' PEQ blocks
+		ct:instance Eq1		{ct:instance-type EqA;}
+		ct:instance Eq2		{ct:instance-type EqA;}
+		
+		// Channel gain
+		ct:instance 	Gain {
+			ct:instance-type ncaGain;
+			uses port-pair;					// This object's ports
+			leaf setting		{ncx:value 0;}
+		}
+		
+		// Channel mute
+		ct:instance 	Mute {
+			ct:instance-type ncaMute;
+			uses port-pair;					// This object's ports
+			leaf	setting		{ncx:value false;}
+		}				
+	
+		// Phantom power
+		ct:instance	PhantomPower {
+			ct:instance-type ncaSwitch {
+				leaf position {ncx:value 0;}
+				leaf-list positionNames {
+					ncx:value "off";
+					ncx:value "on";
+				}
+				leaf-list positionEnable {
+					ncx:value true;
+					ncx:value true;
+				}
+			}
+		}				
+		
+		// Input Level sensor
+		ct:instance 	InputLevel { 
+			ct:instance-type ncaAudioLevelSensor;
+			ct:instance-list ports {						// sensor input port				
+				ct:instance-type ncaPort; 
+				port 1,in,Input
+			}
+		}	
+		
+		// Output Level sensor
+		ct:instance 	OutputLevel { 
+			ct:instance-type ncaAudioLevelSensor;
+			ct:instance-list ports {						// sensor input port				
+				ct:instance-type ncaPort; 
+				port 1,in,Input
+			}
+		}		
+	}	// end block
+}	// end module
