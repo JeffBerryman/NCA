@@ -6,7 +6,7 @@
 //		When they're distributed, each module will be a separate file
 //		that device schemas can import as needed. 
 //
-//		Feature-set module names begin with "fs"
+//		Feature-set module names begin with "fs"  
 //
 // ===================================================================
 	
